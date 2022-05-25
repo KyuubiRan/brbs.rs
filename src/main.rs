@@ -6,6 +6,7 @@ mod enums;
 mod routing;
 mod utils;
 mod structs;
+mod bili_requests;
 
 fn log_format(
     w: &mut dyn std::io::Write,

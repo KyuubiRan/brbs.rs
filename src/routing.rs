@@ -4,12 +4,14 @@ use actix_web::{
     App, HttpServer, Responder,
 };
 
-use json::{object, JsonValue};
+use json::object;
 use log::info;
 
 use crate::{
-    configs, db,
+    bili_requests, configs, db,
     enums::{self, Status},
+    structs::User,
+    utils::get_response_json,
 };
 
 fn act_success() -> String {
@@ -34,15 +36,6 @@ fn internal_error() -> String {
         msg: "内部错误"
     }
     .dump()
-}
-
-fn get_response_json(data: Bytes) -> Option<JsonValue> {
-    let parse_data = match String::from_utf8(data.to_vec()) {
-        Ok(data) => data,
-        _ => return None,
-    };
-
-    json::parse(&parse_data).ok()
 }
 
 async fn make_op(data: Bytes, op: enums::Status) -> impl Responder {
@@ -78,9 +71,41 @@ async fn make_op(data: Bytes, op: enums::Status) -> impl Responder {
     act_success()
 }
 
+fn query_result(user: User) -> String {
+    match user.status {
+        Status::None => object! {
+            code: 0,
+            msg: "查询成功",
+            data: { 
+                uid: user.uid,
+                status: 0 
+            }
+        }
+        .dump(),
+        Status::Black => object! {
+            code: 0,
+            msg: "查询成功",
+            data: { 
+                uid: user.uid,
+                status: 1, 
+                reason: user.last_reason.unwrap_or("无".to_owned()) 
+            }
+        }
+        .dump(),
+        Status::White => object! {
+            code: 0,
+            msg: "查询成功",
+            data: { 
+                uid: user.uid,
+                status: 2, 
+                reason: user.last_reason.unwrap_or("无".to_owned()) 
+            }
+        }
+        .dump(),
+    }
+}
 
 /** 请求部分 **/
-
 
 /*
 GET /query/status/uid=123456
@@ -99,39 +124,27 @@ async fn query_by_id(params: Path<String>) -> impl Responder {
 
             let user = db::get_user_by_id(id).await;
 
-            match user.status {
-                Status::None => object! {
-                    code: 0,
-                    msg: "查询成功",
-                    data: { status: 0 }
-                }
-                .dump(),
-                Status::Black => object! {
-                    code: 0,
-                    msg: "查询成功",
-                    data: { status: 1, reason: user.last_reason.unwrap_or("无".to_owned()) }
-                }
-                .dump(),
-                Status::White => object! {
-                    code: 0,
-                    msg: "查询成功",
-                    data: { status: 2, reason: user.last_reason.unwrap_or("无".to_owned()) }
-                }
-                .dump(),
-            }
+            query_result(user)
         }
         _ => invalid_param(),
     }
 }
 
-// #[get("/query/status/key={key}")]
-// async fn query_by_key(params: Path<String>) -> impl Responder {
-//     let key = params.into_inner();
+#[get("/query/status/key={key}")]
+async fn query_by_key(params: Path<String>) -> impl Responder {
+    let key = params.into_inner();
 
-//     info!("Recv query by key={key}");
+    info!("Recv query by key={key}");
 
-//     ""
-// }
+    let uid = match bili_requests::get_uid_by_access_key(&key).await {
+        Some(uid) => uid,
+        _ => return invalid_param(),
+    };
+
+    let user = db::get_user_by_id(uid).await;
+
+    query_result(user)
+}
 
 /*
 Response: {"code": 0, "msg": "查询成功", "data": {"blackTimes": 3}}
@@ -309,6 +322,7 @@ pub async fn run_server() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .service(query_by_id)
+            .service(query_by_key)
             .service(query_black_times_by_id)
             .route("/admin/black", post().to(make_black))
             .route("/admin/white", post().to(make_white))
