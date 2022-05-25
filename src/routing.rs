@@ -32,7 +32,7 @@ fn act_success() -> HttpResponse {
 
 fn invalid_param() -> HttpResponse {
     let s = object! {
-        code: 400,
+        code: 403,
         msg: "非法参数"
     }
     .dump();
@@ -121,7 +121,7 @@ fn query_result(user: User) -> HttpResponse {
 
 /*
 GET /query/status/uid=123456
-Response: {"code": 0, "data": {"status": 1, "reason": "评论区发送解析链接"}}
+Response: {"code": 200, "data": {"status": 1, "reason": "评论区发送解析链接"}}
 Status: 0: none, 1: black, 2: white
 */
 #[get("/query/status/uid={uid}")]
@@ -159,7 +159,7 @@ async fn query_by_key(params: Path<String>) -> HttpResponse {
 }
 
 /*
-Response: {"code": 0, "msg": "查询成功", "data": {"blackTimes": 3}}
+Response: {"code": 200, "msg": "查询成功", "data": {"blackTimes": 3}}
 */
 #[get("/query/times/uid={uid}")]
 async fn query_black_times_by_id(params: Path<String>) -> HttpResponse {
