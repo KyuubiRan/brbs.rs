@@ -17,6 +17,11 @@ GET /query/status/key=abcdefghijklmnopqrstuvwxyz
 ```json
 {"code": 200, "data": {"status": 1, "reason": "评论区发送解析链接"}}
 ```
+| status | 状态 |
+| :----: | :-: |
+|   0    | 无 |
+|   1    | 黑 |
+|   2    | 白 |
 
 ### 查询被拉黑次数
 `请求`
