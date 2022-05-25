@@ -249,8 +249,7 @@ pub async fn count_black_times(uid: i64) -> i64 {
     }
 }
 
-pub async fn do_op(uid: i64, op: Status, op_role: &str, reason: &str) {
-    let op = &op;
+pub async fn do_op(uid: i64, op: &Status, op_role: &str, reason: &str) {
     {
         let mut db = POOL.begin().await.unwrap();
 

@@ -36,6 +36,52 @@ fn internal_error() -> String {
     .dump()
 }
 
+fn get_response_json(data: Bytes) -> Option<JsonValue> {
+    let parse_data = match String::from_utf8(data.to_vec()) {
+        Ok(data) => data,
+        _ => return None,
+    };
+
+    json::parse(&parse_data).ok()
+}
+
+async fn make_op(data: Bytes, op: enums::Status) -> impl Responder {
+    let json = match get_response_json(data) {
+        Some(json) => json,
+        _ => return invalid_param(),
+    };
+
+    let id = match json["uid"].as_i64() {
+        Some(id) => id,
+        None => return invalid_param(),
+    };
+
+    let key = match json["key"].as_str() {
+        Some(key) => key,
+        None => return invalid_param(),
+    };
+
+    let exec_role = match db::get_admin_key_role(key).await {
+        Some(role) => role,
+        None => return invalid_param(),
+    };
+
+    let reason = match json["reason"].as_str() {
+        Some(key) => key,
+        None => return invalid_param(),
+    };
+
+    info!("Recv make black uid={id} key={key} reason={reason}");
+
+    db::do_op(id, &op, &exec_role, reason).await;
+
+    act_success()
+}
+
+
+/** 请求部分 **/
+
+
 /*
 GET /query/status/uid=123456
 Response: {"code": 0, "data": {"status": 1, "reason": "评论区发送解析链接"}}
@@ -110,48 +156,6 @@ async fn query_black_times_by_id(params: Path<String>) -> impl Responder {
         }
         _ => invalid_param(),
     }
-}
-
-fn get_response_json(data: Bytes) -> Option<JsonValue> {
-    let parse_data = match String::from_utf8(data.to_vec()) {
-        Ok(data) => data,
-        _ => return None,
-    };
-
-    json::parse(&parse_data).ok()
-}
-
-async fn make_op(data: Bytes, op: enums::Status) -> impl Responder {
-    let json = match get_response_json(data) {
-        Some(json) => json,
-        _ => return invalid_param(),
-    };
-
-    let id = match json["uid"].as_i64() {
-        Some(id) => id,
-        None => return invalid_param(),
-    };
-
-    let key = match json["key"].as_str() {
-        Some(key) => key,
-        None => return invalid_param(),
-    };
-
-    let exec_role = match db::get_admin_key_role(key).await {
-        Some(role) => role,
-        None => return invalid_param(),
-    };
-
-    let reason = match json["reason"].as_str() {
-        Some(key) => key,
-        None => return invalid_param(),
-    };
-
-    info!("Recv make black uid={id} key={key} reason={reason}");
-
-    db::do_op(id, op, &exec_role, reason).await;
-
-    act_success()
 }
 
 /*
