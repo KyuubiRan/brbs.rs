@@ -1,7 +1,8 @@
 use actix_web::{
     get,
+    http::header::ContentType,
     web::{post, Bytes, Path},
-    App, HttpServer, Responder,
+    App, HttpResponse, HttpServer,
 };
 
 use json::object;
@@ -14,31 +15,40 @@ use crate::{
     utils::get_response_json,
 };
 
-fn act_success() -> String {
-    object! {
-        code: 0,
+fn make_json_http(json: String) -> HttpResponse {
+    HttpResponse::Ok()
+        .insert_header(ContentType::json())
+        .body(json)
+}
+
+fn act_success() -> HttpResponse {
+    let s = object! {
+        code: 200,
         msg: "执行成功"
     }
-    .dump()
+    .dump();
+    make_json_http(s)
 }
 
-fn invalid_param() -> String {
-    object! {
-        code: 1,
+fn invalid_param() -> HttpResponse {
+    let s = object! {
+        code: 400,
         msg: "非法参数"
     }
-    .dump()
+    .dump();
+    make_json_http(s)
 }
 
-fn internal_error() -> String {
-    object! {
-        code: 2,
+fn internal_error() -> HttpResponse {
+    let s = object! {
+        code: 500,
         msg: "内部错误"
     }
-    .dump()
+    .dump();
+    make_json_http(s)
 }
 
-async fn make_op(data: Bytes, op: enums::Status) -> impl Responder {
+async fn make_op(data: Bytes, op: enums::Status) -> HttpResponse {
     let json = match get_response_json(data) {
         Some(json) => json,
         _ => return invalid_param(),
@@ -71,38 +81,40 @@ async fn make_op(data: Bytes, op: enums::Status) -> impl Responder {
     act_success()
 }
 
-fn query_result(user: User) -> String {
-    match user.status {
+fn query_result(user: User) -> HttpResponse {
+    let ret = match user.status {
         Status::None => object! {
-            code: 0,
+            code: 200,
             msg: "查询成功",
-            data: { 
+            data: {
                 uid: user.uid,
-                status: 0 
+                status: 0
             }
         }
         .dump(),
         Status::Black => object! {
-            code: 0,
+            code: 200,
             msg: "查询成功",
-            data: { 
+            data: {
                 uid: user.uid,
-                status: 1, 
-                reason: user.last_reason.unwrap_or("无".to_owned()) 
+                status: 1,
+                reason: user.last_reason.unwrap_or("无".to_owned())
             }
         }
         .dump(),
         Status::White => object! {
-            code: 0,
+            code: 200,
             msg: "查询成功",
-            data: { 
+            data: {
                 uid: user.uid,
-                status: 2, 
-                reason: user.last_reason.unwrap_or("无".to_owned()) 
+                status: 2,
+                reason: user.last_reason.unwrap_or("无".to_owned())
             }
         }
         .dump(),
-    }
+    };
+
+    make_json_http(ret)
 }
 
 /** 请求部分 **/
@@ -113,7 +125,7 @@ Response: {"code": 0, "data": {"status": 1, "reason": "评论区发送解析链�
 Status: 0: none, 1: black, 2: white
 */
 #[get("/query/status/uid={uid}")]
-async fn query_by_id(params: Path<String>) -> impl Responder {
+async fn query_by_id(params: Path<String>) -> HttpResponse {
     let id = params.into_inner();
 
     let id = id.parse::<i64>();
@@ -131,7 +143,7 @@ async fn query_by_id(params: Path<String>) -> impl Responder {
 }
 
 #[get("/query/status/key={key}")]
-async fn query_by_key(params: Path<String>) -> impl Responder {
+async fn query_by_key(params: Path<String>) -> HttpResponse {
     let key = params.into_inner();
 
     info!("Recv query by key={key}");
@@ -150,7 +162,7 @@ async fn query_by_key(params: Path<String>) -> impl Responder {
 Response: {"code": 0, "msg": "查询成功", "data": {"blackTimes": 3}}
 */
 #[get("/query/times/uid={uid}")]
-async fn query_black_times_by_id(params: Path<String>) -> impl Responder {
+async fn query_black_times_by_id(params: Path<String>) -> HttpResponse {
     let id = params.into_inner();
 
     let id = id.parse::<i64>();
@@ -160,12 +172,13 @@ async fn query_black_times_by_id(params: Path<String>) -> impl Responder {
             info!("Recv query black times by uid={id}");
 
             let times = db::count_black_times(id).await;
-            object! {
-                code: 0,
+            let ret = object! {
+                code: 200,
                 msg: "查询成功",
                 data: { blackTimes: times }
             }
-            .dump()
+            .dump();
+            make_json_http(ret)
         }
         _ => invalid_param(),
     }
@@ -173,33 +186,33 @@ async fn query_black_times_by_id(params: Path<String>) -> impl Responder {
 
 /*
 Request: {"uid": 123456, "key": "...", "reason": "..."}
-Response: {"code":0, "msg":"操作成功"}
+Response: {"code": 200, "msg": "操作成功"}
 */
-async fn make_black(data: Bytes) -> impl Responder {
+async fn make_black(data: Bytes) -> HttpResponse {
     make_op(data, enums::Status::Black).await
 }
 
 /*
 Request: {"uid": 123456, "key": "...", "reason": "..."}
-Response: {"code":0, "msg":"操作成功"}
+Response: {"code": 200, "msg": "操作成功"}
 */
-async fn make_white(data: Bytes) -> impl Responder {
+async fn make_white(data: Bytes) -> HttpResponse {
     make_op(data, enums::Status::White).await
 }
 
 /*
 Request: {"uid": 123456, "key": "...", "reason": "..."}
-Response: {"code":0, "msg":"操作成功"}
+Response: {"code": 200, "msg": "操作成功"}
 */
-async fn make_none(data: Bytes) -> impl Responder {
+async fn make_none(data: Bytes) -> HttpResponse {
     make_op(data, enums::Status::None).await
 }
 
 /*
 Request: {"lvl": [0-127], "key": "...", "role": "..."}
-Response: {"code":0, "msg":"生成成功", "data":{"key":"..."}}
+Response: {"code": 200, "msg":"生成成功", "data":{"key":"..."}}
 */
-async fn key_gen(data: Bytes) -> impl Responder {
+async fn key_gen(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
         Some(json) => json,
         _ => return invalid_param(),
@@ -224,21 +237,24 @@ async fn key_gen(data: Bytes) -> impl Responder {
     info!("Recv key gen key={key}, role={role} lvl={lvl}");
 
     match db::gen_key(lvl, role).await {
-        Some(k) => object! {
-            code: 0,
-            msg: "生成成功",
-            data: { key: k }
+        Some(k) => {
+            let ret = object! {
+                code: 200,
+                msg: "生成成功",
+                data: { key: k }
+            }
+            .dump();
+            make_json_http(ret)
         }
-        .dump(),
         _ => internal_error(),
     }
 }
 
 /*
 Request: {"key": "...", "role": "..."} or {"key": "...", "revokeKey": "..."}
-Response: {"code":0, "msg":"操作成功"}
+Response: {"code": 200, "msg": "操作成功"}
 */
-async fn key_revoke(data: Bytes) -> impl Responder {
+async fn key_revoke(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
         Some(json) => json,
         _ => return invalid_param(),
@@ -266,9 +282,9 @@ async fn key_revoke(data: Bytes) -> impl Responder {
 
 /*
 Request: {"uid": 123456, "key": "..."}
-Response: {"code":0, "msg":"查询成功", "data" {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "time": "2022-5-5 12:12:12"}}
+Response: {"code": 200, "msg":"查询成功", "data" {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "time": "2022-5-5 12:12:12"}}
 */
-async fn last_reason(data: Bytes) -> impl Responder {
+async fn last_reason(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
         Some(json) => json,
         _ => return invalid_param(),
@@ -291,11 +307,12 @@ async fn last_reason(data: Bytes) -> impl Responder {
     let r = match db::get_last_reason(id).await {
         Some(reason) => reason,
         _ => {
-            return object! {
-                code: 0,
+            let ret = object! {
+                code: 200,
                 msg: "无结果"
             }
-            .dump()
+            .dump();
+            return make_json_http(ret);
         }
     };
 
@@ -305,8 +322,8 @@ async fn last_reason(data: Bytes) -> impl Responder {
     let reason = r.reason;
     let ts = r.op_time;
 
-    object! {
-        code: 0,
+    let ret = object! {
+        code: 200,
         msg: "查询成功",
         data: {
             status: op,
@@ -315,7 +332,9 @@ async fn last_reason(data: Bytes) -> impl Responder {
             timestamp: ts
         }
     }
-    .dump()
+    .dump();
+
+    make_json_http(ret)
 }
 
 pub async fn run_server() -> std::io::Result<()> {
