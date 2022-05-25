@@ -5,19 +5,11 @@
 `cargo build --release & ./target/release/brbs-rs`
 
 ## 请求
-
-### 查询(by uid)
+### 查询
 `请求`
 ```http 
 GET /query/status/uid=123456
-```   
-`响应`
-```json
-{"code": 200, "data": {"status": 1, "reason": "评论区发送解析链接"}}
 ```
-
-### 查询(by access_key)
-`请求`
 ```http
 GET /query/status/key=abcdefghijklmnopqrstuvwxyz
 ```
@@ -26,10 +18,13 @@ GET /query/status/key=abcdefghijklmnopqrstuvwxyz
 {"code": 200, "data": {"status": 1, "reason": "评论区发送解析链接"}}
 ```
 
-### 查询被拉黑次数(by uid)
+### 查询被拉黑次数
 `请求`
 ```http
 GET /query/times/uid=123456
+```
+```http
+GET /query/times/key=abcdefghijklmnopqrstuvwxyz
 ```
 `响应`
 ```json
