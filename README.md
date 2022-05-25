@@ -26,6 +26,16 @@ GET /query/status/key=abcdefghijklmnopqrstuvwxyz
 {"code": 200, "data": {"status": 1, "reason": "评论区发送解析链接"}}
 ```
 
+### 查询被拉黑次数(by uid)
+`请求`
+```http
+GET /query/times/uid=123456
+```
+`响应`
+```json
+{"code": 200, "msg": "查询成功", "data": {"blackTimes": 3}}
+```
+
 ### 修改状态
 `请求`
 ```http
