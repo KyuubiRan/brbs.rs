@@ -185,6 +185,32 @@ async fn query_black_times_by_id(params: Path<String>) -> HttpResponse {
 }
 
 /*
+Response: {"code": 200, "msg": "查询成功", "data": {"blackTimes": 3}}
+*/
+#[get("/query/times/key={key}")]
+async fn query_black_times_by_key(params: Path<String>) -> HttpResponse {
+    let key = params.into_inner();
+
+    let id = bili_requests::get_uid_by_access_key(&key).await;
+
+    match id {
+        Some(id) => {
+            info!("Recv query black times by key={key}({id})");
+
+            let times = db::count_black_times(id).await;
+            let ret = object! {
+                code: 200,
+                msg: "查询成功",
+                data: { blackTimes: times }
+            }
+            .dump();
+            make_json_http(ret)
+        }
+        _ => invalid_param(),
+    }
+}
+
+/*
 Request: {"uid": 123456, "key": "...", "reason": "..."}
 Response: {"code": 200, "msg": "操作成功"}
 */
@@ -282,7 +308,7 @@ async fn key_revoke(data: Bytes) -> HttpResponse {
 
 /*
 Request: {"uid": 123456, "key": "..."}
-Response: {"code": 200, "msg":"查询成功", "data" {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "time": "2022-5-5 12:12:12"}}
+Response: {"code": 200, "msg":"查询成功", "data" {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "timestamp": 1653490177054}}
 */
 async fn last_reason(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
@@ -343,6 +369,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .service(query_by_id)
             .service(query_by_key)
             .service(query_black_times_by_id)
+            .service(query_black_times_by_key)
             .route("/admin/black", post().to(make_black))
             .route("/admin/white", post().to(make_white))
             .route("/admin/none", post().to(make_none))
