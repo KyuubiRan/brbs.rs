@@ -32,7 +32,7 @@ fn act_success() -> HttpResponse {
 
 fn invalid_param() -> HttpResponse {
     let s = object! {
-        code: 403,
+        code: 400,
         msg: "非法参数"
     }
     .dump();
