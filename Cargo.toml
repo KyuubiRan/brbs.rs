@@ -1,0 +1,16 @@
+[package]
+edition = "2021"
+name = "brbs-rs"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.0.1"
+flexi_logger = "0.22.3"
+json = "0.12.4"
+lazy_static = "1.4.0"
+log = "0.4.17"
+sqlx = {version = "0.5.13", features = ["runtime-tokio-rustls", "sqlite"]}
+tokio = {version = "1.18.2", features = ["full"]}
+rand = "0.8.5"
