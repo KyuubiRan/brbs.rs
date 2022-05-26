@@ -307,6 +307,39 @@ async fn key_revoke(data: Bytes) -> HttpResponse {
 }
 
 /*
+Request: {"key": "..."}
+Response: {"code": 200, "msg": "重新生成成功", "data": {"key":"..."}}
+*/
+async fn owner_key_regen(data: Bytes) -> HttpResponse {
+    let json = match get_response_json(data) {
+        Some(json) => json,
+        _ => return invalid_param(),
+    };
+
+    match json["key"].as_str() {
+        Some(s) => {
+            if !db::check_admin_key_with_role_and_lvl(s, "owner", 127).await {
+                return invalid_param();
+            }
+            let k = db::regen_owner_key(s).await;
+            match k {
+                Some(k) => {
+                    let ret = object! {
+                        code: 200,
+                        msg: "重新生成成功",
+                        data: { key: k }
+                    }
+                    .dump();
+                    make_json_http(ret)
+                }
+                _ => internal_error(),
+            }
+        }
+        _ => invalid_param(),
+    }
+}
+
+/*
 Request: {"uid": 123456, "key": "..."}
 Response: {"code": 200, "msg":"查询成功", "data": {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "timestamp": 1653490177054}}
 */
@@ -412,6 +445,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .route("/admin/statistics", post().to(statistics))
             .route("/owner/keygen", post().to(key_gen))
             .route("/owner/keyrevoke", post().to(key_revoke))
+            .route("/owner/keyregen", post().to(owner_key_regen))
     })
     .bind(("127.0.0.1", configs::SERVER_PORT))?
     .run()

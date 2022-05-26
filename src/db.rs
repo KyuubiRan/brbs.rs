@@ -77,6 +77,26 @@ pub async fn check_admin_key_with_lvl(key: &str, lvl: i8) -> bool {
     }
 }
 
+pub async fn check_admin_key_with_role_and_lvl(key: &str, role: &str, lvl: i8) -> bool {
+    let mut db = POOL.acquire().await.unwrap();
+
+    let sql = r#"SELECT lvl FROM keys WHERE admin_key = $1 AND role = $2"#;
+
+    let ret = sqlx::query(sql)
+        .bind(key)
+        .bind(role)
+        .fetch_optional(&mut db)
+        .await;
+
+    match ret {
+        Ok(Some(r)) => {
+            let l: i8 = r.get(0);
+            l >= lvl
+        }
+        _ => false,
+    }
+}
+
 pub async fn check_admin_key(key: &str) -> bool {
     check_admin_key_with_lvl(key, 0).await
 }
@@ -94,28 +114,54 @@ pub async fn get_admin_key_role(key: &str) -> Option<String> {
     }
 }
 
-async fn gen_admin_key() {
+async fn gen_owner_key() {
     let mut db = POOL.acquire().await.unwrap();
 
-    let sql = r#"SELECT admin_key FROM keys WHERE lvl = 127"#;
+    let sql = r#"SELECT admin_key FROM keys WHERE id = 1"#;
 
     let ret = sqlx::query(sql).fetch_optional(&mut db).await;
 
     match ret {
         Ok(Some(row)) => {
             let key: String = row.get(0);
-            info!("Admin key already exists: {}", key)
+            info!("Owner key already exists: {}", key)
         }
         _ => {
-            gen_key(127, "admin").await;
+            gen_key(127, "owner").await;
         }
     };
+}
+
+pub async fn regen_owner_key(key: &str) -> Option<String> {
+    let regen = gen_rand_key();
+
+    let mut db = POOL.begin().await.unwrap();
+
+    let sql = r#"UPDATE keys SET admin_key = $1 WHERE admin_key = $2"#;
+
+    let ret = sqlx::query(sql)
+        .bind(&regen)
+        .bind(key)
+        .execute(&mut db)
+        .await;
+
+    match ret {
+        Ok(_) => {
+            db.commit().await.unwrap();
+            info!("Owner key regenerated: {key}");
+            Some(regen)
+        }
+        _ => {
+            db.rollback().await.unwrap();
+            None
+        }
+    }
 }
 
 pub async fn revoke_admin_key_by_role(role: &str) {
     let mut db = POOL.begin().await.unwrap();
 
-    let sql = r#"DELETE FROM keys WHERE role = $1"#;
+    let sql = r#"DELETE FROM keys WHERE role = $1 AND NOT id = 1"#;
 
     let ret = sqlx::query(sql).bind(role).execute(&mut db).await;
 
@@ -134,7 +180,7 @@ pub async fn revoke_admin_key_by_role(role: &str) {
 pub async fn revoke_admin_key_by_key(key: &str) {
     let mut db = POOL.begin().await.unwrap();
 
-    let sql = r#"DELETE FROM keys WHERE admin_key = $1"#;
+    let sql = r#"DELETE FROM keys WHERE admin_key = $1 AND NOT id = 1"#;
 
     let ret = sqlx::query(sql).bind(key).execute(&mut db).await;
 
@@ -170,7 +216,7 @@ pub async fn prepare() {
             id      INTEGER PRIMARY KEY AUTOINCREMENT,
             uid     BIGINT   NOT NULL,
             op      SMALLINT NOT NULL DEFAULT 0,
-            op_role TEXT     NOT NULL DEFAULT "admin",
+            op_role TEXT     NOT NULL DEFAULT 'admin',
             reason  TEXT,
             op_time BIGINT   NOT NULL DEFAULT 0
         )"#;
@@ -180,7 +226,7 @@ pub async fn prepare() {
         let sql = r#"CREATE TABLE IF NOT EXISTS keys
         (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            admin_key VARCHAR(32) NOT NULL,
+            admin_key  VARCHAR(32) NOT NULL,
             lvl        SMALLINT    NOT NULL DEFAULT 1,
             role       Text        NOT NULL
         )"#;
@@ -188,7 +234,7 @@ pub async fn prepare() {
         sqlx::query(sql).execute(&mut db).await.unwrap();
     }
 
-    gen_admin_key().await;
+    gen_owner_key().await;
 
     info!("Finish prepare database");
 }

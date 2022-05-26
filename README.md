@@ -108,4 +108,15 @@ POST /owner/keyrevoke
 ```json
 {"code": 200, "msg": "操作成功"}
 ```
-**要求操作者key的lvl为127才能添加/移除key**
+**要求操作者key的lvl为127才能添加/移除admin key**
+
+### 重新生成owner key
+`请求`
+```http
+POST /owner/keyregen
+```
+`响应`
+```json
+{"code": 200, "msg": "重新生成成功", "data": {"key": "..."}}
+```
+**要求操作者key的lvl为127且role为owner才能重新生成owner key**
