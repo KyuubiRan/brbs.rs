@@ -236,7 +236,7 @@ async fn make_none(data: Bytes) -> HttpResponse {
 
 /*
 Request: {"lvl": [0-127], "key": "...", "role": "..."}
-Response: {"code": 200, "msg":"生成成功", "data":{"key":"..."}}
+Response: {"code": 200, "msg": "生成成功", "data": {"key":"..."}}
 */
 async fn key_gen(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
@@ -308,7 +308,7 @@ async fn key_revoke(data: Bytes) -> HttpResponse {
 
 /*
 Request: {"uid": 123456, "key": "..."}
-Response: {"code": 200, "msg":"查询成功", "data" {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "timestamp": 1653490177054}}
+Response: {"code": 200, "msg":"查询成功", "data": {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "timestamp": 1653490177054}}
 */
 async fn last_reason(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
@@ -365,7 +365,7 @@ async fn last_reason(data: Bytes) -> HttpResponse {
 
 /*
 Request: {"key": "..."}
-Response: {"code": 200, "msg":"查询成功", "data" {"blackCount": 1000, "whiteCount": 10}}
+Response: {"code": 200, "msg": "查询成功", "data": {"blackCount": 1000, "whiteCount": 10}}
 */
 pub async fn statistics(data: Bytes) -> HttpResponse {
     let json = match get_response_json(data) {
