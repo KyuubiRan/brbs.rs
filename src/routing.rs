@@ -363,6 +363,41 @@ async fn last_reason(data: Bytes) -> HttpResponse {
     make_json_http(ret)
 }
 
+/*
+Request: {"key": "..."}
+Response: {"code": 200, "msg":"查询成功", "data" {"blackCount": 1000, "whiteCount": 10}}
+*/
+pub async fn statistics(data: Bytes) -> HttpResponse {
+    let json = match get_response_json(data) {
+        Some(json) => json,
+        _ => return invalid_param(),
+    };
+
+    let key = match json["key"].as_str() {
+        Some(key) => key,
+        None => return invalid_param(),
+    };
+
+    if !db::check_admin_key(key).await {
+        return invalid_param();
+    }
+
+    let black = db::count_total_by_status(&Status::Black).await;
+    let white = db::count_total_by_status(&Status::White).await;
+
+    let ret = object! {
+        code: 200,
+        msg: "查询成功",
+        data: {
+            blackCount: black,
+            whiteCount: white
+        }
+    }
+    .dump();
+
+    make_json_http(ret)
+}
+
 pub async fn run_server() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
@@ -374,6 +409,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .route("/admin/white", post().to(make_white))
             .route("/admin/none", post().to(make_none))
             .route("/admin/last", post().to(last_reason))
+            .route("/admin/statistics", post().to(statistics))
             .route("/owner/keygen", post().to(key_gen))
             .route("/owner/keyrevoke", post().to(key_revoke))
     })

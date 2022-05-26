@@ -249,6 +249,25 @@ pub async fn count_black_times(uid: i64) -> i64 {
     }
 }
 
+pub async fn count_total_by_status(status: &Status) -> i64 {
+    let mut db = POOL.acquire().await.unwrap();
+
+    let sql = r#"SELECT COUNT(*) FROM users WHERE status = $1"#;
+
+    let ret = sqlx::query(sql)
+        .bind(status.into())
+        .fetch_optional(&mut db)
+        .await;
+
+    match ret {
+        Ok(Some(r)) => {
+            let i: i64 = r.get(0);
+            i
+        }
+        _ => 0,
+    }
+}
+
 pub async fn do_op(uid: i64, op: &Status, op_role: &str, reason: &str) {
     {
         let mut db = POOL.begin().await.unwrap();

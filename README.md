@@ -70,6 +70,18 @@ POST /admin/last
 {"code": 200, "msg":"查询成功", "data" {"status": 1, "reason": "评论区发送解析链接", "opRole": "admin", "timestamp": 1653490177054}}
 ```
 
+### 统计信息
+`请求`
+```http
+POST /admin/statistics
+
+{"key": "..."}
+```
+`响应`
+```json
+{"code": 200, "msg":"查询成功", "data" {"blackCount": 1000, "whiteCount": 10}}
+```
+
 ### 添加/移除Admin Key
 `请求`
 ```http
