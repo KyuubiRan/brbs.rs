@@ -1,7 +1,7 @@
 use actix_web::{
     get,
     http::header::ContentType,
-    web::{post, Bytes, Path},
+    web::{post, Bytes, Path, self},
     App, HttpResponse, HttpServer,
 };
 
@@ -438,6 +438,10 @@ pub async fn statistics(data: Bytes) -> HttpResponse {
     make_json_http(ret)
 }
 
+async fn not_found() -> HttpResponse {
+    HttpResponse::NotFound().body("")
+}
+
 pub async fn run_server() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
@@ -453,6 +457,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .route("/owner/keygen", post().to(key_gen))
             .route("/owner/keyrevoke", post().to(key_revoke))
             .route("/owner/keyregen", post().to(owner_key_regen))
+            .default_service(web::route().to(not_found))
     })
     .bind(("127.0.0.1", configs::SERVER_PORT))?
     .run()
