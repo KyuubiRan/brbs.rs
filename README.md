@@ -1,5 +1,5 @@
 # brbs.rs
-哔哩漫游黑名单高性能服务器
+哔哩漫游黑名单高性能Rust服务端实现
 
 ## 构建 & 运行
 `cargo build --release & ./target/release/brbs-rs`
