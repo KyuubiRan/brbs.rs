@@ -108,3 +108,4 @@ POST /owner/keyrevoke
 ```json
 {"code": 200, "msg": "操作成功"}
 ```
+**要求key的lvl为127才能添加/移除key**
