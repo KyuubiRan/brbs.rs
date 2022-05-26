@@ -79,7 +79,7 @@ POST /admin/statistics
 ```
 `响应`
 ```json
-{"code": 200, "msg":"查询成功", "data" {"blackCount": 1000, "whiteCount": 10}}
+{"code": 200, "msg":"查询成功", "data": {"blackCount": 1000, "whiteCount": 10}}
 ```
 
 ### 添加/移除Admin Key
@@ -93,7 +93,7 @@ POST /owner/keygen
   
 `响应`
 ```json
-{"code": 200, "msg":"生成成功", "data":{"key":"..."}}
+{"code": 200, "msg":"生成成功", "data": {"key":"..."}}
 ```
   
 `请求`
