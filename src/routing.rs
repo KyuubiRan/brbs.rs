@@ -6,7 +6,7 @@ use actix_web::{
 };
 
 use json::object;
-use log::info;
+use log::debug;
 
 use crate::{
     bili_requests, configs, db,
@@ -74,7 +74,7 @@ async fn make_op(data: Bytes, op: enums::Status) -> HttpResponse {
         None => return invalid_param(),
     };
 
-    info!("Recv make black uid={id} key={key} reason={reason}");
+    debug!("Recv make black uid={id} key={key} reason={reason}");
 
     db::do_op(id, &op, &exec_role, reason).await;
 
@@ -132,7 +132,7 @@ async fn query_by_id(params: Path<String>) -> HttpResponse {
 
     match id {
         Ok(id) => {
-            info!("Recv query by uid={id}");
+            debug!("Recv query by uid={id}");
 
             let user = db::get_user_by_id(id).await;
 
@@ -146,7 +146,7 @@ async fn query_by_id(params: Path<String>) -> HttpResponse {
 async fn query_by_key(params: Path<String>) -> HttpResponse {
     let key = params.into_inner();
 
-    info!("Recv query by key={key}");
+    debug!("Recv query by key={key}");
 
     let uid = match bili_requests::get_uid_by_access_key(&key).await {
         Some(uid) => uid,
@@ -169,7 +169,7 @@ async fn query_black_times_by_id(params: Path<String>) -> HttpResponse {
 
     match id {
         Ok(id) => {
-            info!("Recv query black times by uid={id}");
+            debug!("Recv query black times by uid={id}");
 
             let times = db::count_black_times(id).await;
             let ret = object! {
@@ -195,7 +195,7 @@ async fn query_black_times_by_key(params: Path<String>) -> HttpResponse {
 
     match id {
         Some(id) => {
-            info!("Recv query black times by key={key}({id})");
+            debug!("Recv query black times by key={key}({id})");
 
             let times = db::count_black_times(id).await;
             let ret = object! {
@@ -260,7 +260,7 @@ async fn key_gen(data: Bytes) -> HttpResponse {
         return invalid_param();
     }
 
-    info!("Recv key gen key={key}, role={role} lvl={lvl}");
+    debug!("Recv key gen key={key}, role={role} lvl={lvl}");
 
     match db::gen_key(lvl, role).await {
         Some(k) => {
@@ -292,6 +292,7 @@ async fn key_revoke(data: Bytes) -> HttpResponse {
                 return invalid_param();
             }
             db::revoke_admin_key_by_key(rev).await;
+            debug!("Recv revoke key: {key}, revoked key: {rev}");
             return act_success();
         }
 
@@ -300,6 +301,7 @@ async fn key_revoke(data: Bytes) -> HttpResponse {
                 return invalid_param();
             }
             db::revoke_admin_key_by_role(role).await;
+            debug!("Recv revoke key: {key}, role: {role}");
             return act_success();
         }
     }
@@ -324,6 +326,7 @@ async fn owner_key_regen(data: Bytes) -> HttpResponse {
             let k = db::regen_owner_key(s).await;
             match k {
                 Some(k) => {
+                    debug!("Recv regen owner key: {s}, new key: {k}");
                     let ret = object! {
                         code: 200,
                         msg: "重新生成成功",
@@ -362,6 +365,8 @@ async fn last_reason(data: Bytes) -> HttpResponse {
     if !db::check_admin_key(key).await {
         return invalid_param();
     }
+
+    debug!("Recv get last reason by key: {key}, uid: {id}");
 
     let r = match db::get_last_reason(id).await {
         Some(reason) => reason,
@@ -417,6 +422,8 @@ pub async fn statistics(data: Bytes) -> HttpResponse {
 
     let black = db::count_total_by_status(&Status::Black).await;
     let white = db::count_total_by_status(&Status::White).await;
+
+    debug!("Recv get statistics key: {key}");
 
     let ret = object! {
         code: 200,
